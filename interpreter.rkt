@@ -246,6 +246,14 @@
       (else (attatch-state (first-state state)
                            (assign-var-state var val (later-state state)))))))
 
+; removes a variable from the state
+define remove-var-state
+  (lambda (var state)
+    (cond
+      ((null? (car state)) (error var "variable not declared"))
+      ((eq? (car (first-state state)) var) (later-state state))
+      (else (attatch-state (first-state state) (remove-var-state var (later-state state)))))))
+
 ;check if variable has been declared
 (define been-declared?
   (lambda (var state)
@@ -254,6 +262,81 @@
       ((null? (car state)) #f)
       ((eq? (car (first-state state)) var) #t)
       (else (been-declared? var (later-state state))))))
+
+; check if a variable has been assigned a value
+(define been-assigned?
+  (lambda (var state)
+    (if (been-declared? var state)
+        (not (null? (get-var-state var state)))
+        (error var "variable not declared"))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;Layer functions that allow the old state implementation to work
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define state-layer-push
+  (lambda (state layer)
+    (cons state layer)))
+
+(define state-layer-pop
+  (lambda (layer)
+    (cdr layer)))
+
+(define state-layer-peek
+  (lambda (layer)
+    (car layer)))
+
+; Removes the variable and its value from the entire state
+(define state-layer-remove
+  (lambda (var layer)
+    (cond
+      ((null? layer) (error var "variable not declared"))
+      ((been-declared? var (state-layer-peek layer)) (state-layer-push  (remove-var-state var (state-layer-peek layer)) (state-layer-pop layer)))
+      (else (state-layer-push (state-layer-peek layer) (remove-var-state var (state-layer-pop stack)))))))
+
+; Returns the value of var in the state.
+(define state-layer-get
+  (lambda (var layer)
+    (cond
+      ((null? layer) (error var "variable not declared"))
+      ((been-declared? var (state-layer-peek stack)) (get-var-state var (state-layer-peek stack)))
+      (else (state-layer-get var (state-layer-pop layer))))))
+
+; Returns #t if var has a value assigned to it in the current state layer
+(define state-layer-assigned?
+  (lambda (var layer)
+    (cond
+      ((null? layer) #f)
+      ((been-assigned? var (state-layer-peek layer)) #t)
+      (else (state-layer-assigned? var (state-layer-pop layer))))))
+
+; returns #t if var has been declared in the current state layer
+(define state-layer-delcared?
+  (lambda (var layer)
+    (cond
+      ((null? layer) #f)
+      ((been-declared? var (state-layer-peek layer)) #t)
+      (else (state-layer-declared? var (state-layer-pop layer))))))
+
+; declares a new variable in the state layer without assigning it a value
+(define state-layer-declare
+  (lambda (var layer)
+    (if (been-declared? var (state-layer-peek layer))
+        (error var "variable already declared")
+        (state-layer-push (attatch-state (list var '()) (state-layer-peek layer)) (state-layer-pop layer)))))
+
+; assigns a value to a variable already declared in the state layer
+(define state-layer-assign
+  (lambda (var val layer)
+    (cond
+      ((null? layer) (error var "variable not declared"))
+      ((been-declared? var (statae-layer-peek layer)) (statye-layer-push (assign-var-state var val (state-layer-peek layer)) (state-layer-pop layer)))
+      (else (state-layer-push (state-layer-peek layer) (state-layer-assign var val (state-layer-pop layer)))))))
+
+
+
+
+
+
 
 
 
