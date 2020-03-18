@@ -179,6 +179,41 @@
       ((and (eq? 'var (car statement)) (not (null? (caddr statement)))) #t)
       (else #f))))
 
+; Returns true if given a try statement with a finally
+(define try-finally?
+  (lambda (stmt)
+    (cond
+      ((and (eq? 'try (operator statement)) (eq? (length statement) 4)) #t)
+      (else #f))))
+
+
+; Returns true if given a try statement with no finally
+(define try?
+  (lambda (statement)
+    (cond
+      ((and (eq? 'try (operator stmt)) ((eq? (length (cadddr statement)) 0))) #t)
+        (else #f))))
+
+; checks if we have a begin statement
+(define begin?
+  (lambda (statement)
+    (eq? 'begin (operator statement))))
+
+; checks if we have a break statement
+(define break?
+  (lambda (statement)
+    (eq? 'break (operator statement))))
+
+; checks if we have a continue statement
+(define continue?
+  (lambda (statement)
+    (eq? 'continue (operator statement))))
+
+; checks if we have a throw statement
+(define throw?
+  (lambda (statement)
+    (eq? 'throw (operator statement))))
+
 ;list of variables
 (define var-list car)
 
