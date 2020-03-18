@@ -1,6 +1,6 @@
 # Notes for project 2
 ### Layers
-- Instead of a state that exists with vars and values `(ie ((a b c foo)(1 2 34))`, we will make a set of blocked layers
+- Instead of a state that exists with vars and values `(ie ((a b c foo)(1 2 3 4))`, we will make a set of layers divided by block (if, main, etc.)
 
 ```
 if (a == b)  --------
