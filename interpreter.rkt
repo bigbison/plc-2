@@ -77,7 +77,7 @@
 
 (define M_declare
   (lambda (var state)
-    (declare-var-state var state)))
+    (state-layer-declare var state)))
 
 (define M_declare-assign
   (lambda (var expression state)
@@ -125,7 +125,7 @@
                                        (cadddr statement) state))
       ((if? statement) (M_if (cadr statement) (caddr statement) state))
       ((return? statement) (M_return (cadr statement) state))
-      (else (error 'statement "invalid statement")))))
+      (else (error statement "invalid statement")))))
 
 ; checks if our statement is a return statement
 (define return?
