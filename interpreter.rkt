@@ -15,6 +15,36 @@
 (define operand1 cadr)
 (define operand2 caddr)
 
+(define val caddr)
+(define value car)
+(define state cadr)
+(define function-body cadr)
+; list of blocks after a begin or try
+(define blocks cdr)
+; Current (first) code block in blocks
+(define current-block car)
+; the condition before a block
+(define condition cadr)
+; body of a code block after a conditional
+(define body caddr)
+; block after an else statement
+(define else-stmt cadddr)
+; Code block following a try
+(define try-block car)
+; block following a catch
+(define catch cdadr)
+; block after a catch
+(define catch-block cadr)
+; exception of catch statement
+(define exception caar)
+; block after a finally
+(define (finally-block x) (cadar (cddr x)))
+
+(define initial-break (lambda (v) (error "break not in a loop")))
+(define initial-throw (lambda (v1 v2) (error "throw not inside try")))
+(define initial-continue (lambda (v) (error "continue not in a loop")))
+(define initial-return (lambda (v) (error "return outside of function")))
+
 ; input file name to interpret file
 (define main
   (lambda (file)
