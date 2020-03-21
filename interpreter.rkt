@@ -137,10 +137,10 @@
 
 ; TODO refactor
 (define M_if-else
-  (lambda (condition then else state)
+  (lambda (condition then else state return break continue throw)
     (cond
-      ((M_boolean condition state) (process-statement then state))
-      (else (process-statement else state) ))))
+      ((M_boolean condition state) (process-statement then state return break continue throw))
+      (else (process-statement else state return break continue throw)))))
 
 ; TODO refactor
 (define M_while
@@ -387,7 +387,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Layer functions that allow the old state implementation to work
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define state-layer-push
   (lambda (state layer)
     (cons state layer)))
