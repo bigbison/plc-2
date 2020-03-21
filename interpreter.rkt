@@ -46,6 +46,7 @@
 (define initial-return (lambda (v) (error "return outside of function")))
 
 ; input file name to interpret file
+; TODO refactor
 (define main
   (lambda (file)
     (run (parser file) '(()()) )
@@ -150,8 +151,22 @@
 ; M_try
 
 ; M_catch
+(define M_catch
+  (lambda (excep statements state return break continue throw)
+    (state-layer-pop (M_begin (catch-block statements) (state-layer-assign (exception statements) excep (state-layer-declare (exception statements) (state-layer-push (empty-state) state))) return break continue throw))))
+
+
 
 ; M_try-finally
+(define M_try-finally
+  (lambda (statements state return break continue throw)
+    (call/cc
+     (lambda (throw2)
+       (M_begin (finally-block statements)
+                (M_begin (try-block statements) state return break continue
+                         (lambda (v1 v2) (throw2 (M_begin (finally-block statements)
+                                                          (M_catch v1 (catch statements) v2 return break continue throw) return break continue throw)))) return break continue throw)))))
+
 
 ; M_begin
 ; returns the state after execution of the code block
