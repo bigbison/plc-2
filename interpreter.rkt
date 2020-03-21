@@ -92,7 +92,7 @@
 
 ; TODO refactor
 (define M_boolean
-  (lambda (expression state)
+  (lambda (expression state throw)
     (cond
       ((eq? 'true expression) #t)
       ((eq? 'false expression) #f)
@@ -113,15 +113,15 @@
   (lambda (var state)
     (state-layer-declare var state)))
 
-; TODO refactor
+
 (define M_declare-assign
-  (lambda (var expression state)
-    (assign-var-state var (M_value expression (declare-var-state var state)) (declare-var-state var state))))
+  (lambda (var expression state throw)
+    (stack-assign var (value (M_value expr (stack-declare var s) throw))
+                      (stack-declare var s))))
                       
-; TODO refactor
 (define M_return
-  (lambda (expression state)
-      (M_value expression state)))
+  (lambda (expression state return throw)
+      (M_value expression state throw)))
 
 ; This only works if the statement has already been declared
 (define M_assign
@@ -142,12 +142,18 @@
       ((M_boolean condition state) (process-statement then state return break continue throw))
       (else (process-statement else state return break continue throw)))))
 
-; TODO refactor
+; returns the state after a while statement
 (define M_while
-  (lambda (condition body state)
-    (cond
-      ((M_boolean condition state) (M_while condition body (process-statement body state)))
-      (else state))))
+  (lambda (condition body state return throw)
+    (call/cc
+     (lambda (break)
+       (call/cc
+        (lambda (continue)
+          (letrec ((loop (lambda (loop-body state)
+                           (if (value (M_boolean condition state throw))
+                               (loop loop-body (process-statement body state return break (lambda (v) (continue (loop loop-body (state-layer-pop v)))) throw))
+                               state))))
+            (loop body state))))))))
 
 
 ; returns the state after executing a try statement
