@@ -113,15 +113,15 @@
   (lambda (var state)
     (state-layer-declare var state)))
 
-; TODO refactor
+
 (define M_declare-assign
-  (lambda (var expression state)
-    (assign-var-state var (M_value expression (declare-var-state var state)) (declare-var-state var state))))
+  (lambda (var expression state throw)
+    (stack-assign var (value (M_value expr (stack-declare var s) throw))
+                      (stack-declare var s))))
                       
-; TODO refactor
 (define M_return
-  (lambda (expression state)
-      (M_value expression state)))
+  (lambda (expression state return throw)
+      (M_value expression state throw)))
 
 ; This only works if the statement has already been declared
 (define M_assign
