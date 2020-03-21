@@ -116,8 +116,8 @@
 
 (define M_declare-assign
   (lambda (var expression state throw)
-    (stack-assign var (value (M_value expr (stack-declare var s) throw))
-                      (stack-declare var s))))
+    (state-layer-assign var (value (M_value expression (state-layer-declare var state) throw))
+                      (state-layer-declare var state))))
                       
 (define M_return
   (lambda (expression state return throw)
@@ -125,8 +125,9 @@
 
 ; This only works if the statement has already been declared
 (define M_assign
-  (lambda (expression state)
-    (assign-var-state (cadr expression) (M_value (caddr expression) state) state)))
+  (lambda (var expression state throw)
+    (state-layer-assign var (value (M_value expression state throw)) (state (M_value expression state throw)))))
+
 
 ; TODO refactor
 (define M_if
