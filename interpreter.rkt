@@ -148,16 +148,23 @@
     (cond
       ((M_boolean condition state) (M_while condition body (process-statement body state)))
       (else state))))
-; M_try
 
-; M_catch
+
+; returns the state after executing a try statement
+(define M_try
+  (lambda (statements state return break continue throw)
+    (call/cc
+     (lambda (throw2)
+       (M_begin (try-block statements) state return break continue (lambda (v1 v2) (throw2 (M_catch v1 (catch statements) v2 return break continue throw))))))))
+
+; returns the state after executing a catch statement
 (define M_catch
   (lambda (excep statements state return break continue throw)
     (state-layer-pop (M_begin (catch-block statements) (state-layer-assign (exception statements) excep (state-layer-declare (exception statements) (state-layer-push (empty-state) state))) return break continue throw))))
 
 
 
-; M_try-finally
+; returns the state after executing a try statement with a finally
 (define M_try-finally
   (lambda (statements state return break continue throw)
     (call/cc
@@ -168,7 +175,6 @@
                                                           (M_catch v1 (catch statements) v2 return break continue throw) return break continue throw)))) return break continue throw)))))
 
 
-; M_begin
 ; returns the state after execution of the code block
 (define M_begin
   (lambda (statements state return break continue throw)
