@@ -92,7 +92,7 @@
 
 ; TODO refactor
 (define M_boolean
-  (lambda (expression state)
+  (lambda (expression state throw)
     (cond
       ((eq? 'true expression) #t)
       ((eq? 'false expression) #f)
@@ -142,12 +142,18 @@
       ((M_boolean condition state) (process-statement then state))
       (else (process-statement else state) ))))
 
-; TODO refactor
+; returns the state after a while statement
 (define M_while
-  (lambda (condition body state)
-    (cond
-      ((M_boolean condition state) (M_while condition body (process-statement body state)))
-      (else state))))
+  (lambda (condition body state return throw)
+    (call/cc
+     (lambda (break)
+       (call/cc
+        (lambda (continue)
+          (letrec ((loop (lambda (loop-body state)
+                           (if (value (M_boolean condition state throw))
+                               (loop loop-body (process-statement body state return break (lambda (v) (continue (loop loop-body (state-layer-pop v)))) throw))
+                               state))))
+            (loop body state))))))))
 
 
 ; returns the state after executing a try statement
