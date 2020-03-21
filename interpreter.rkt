@@ -9,7 +9,7 @@
 
 #lang racket
 (require "simpleParser.rkt")
-(require "statefunction.rkt")
+;(require "statefunction.rkt")
 
 (define operator car)
 (define operand1 cadr)
@@ -51,6 +51,7 @@
     (run (parser file) '(()()) )
     ))
 
+; TODO refactor
 (define run
   (lambda (instructions state)
     (cond
@@ -70,6 +71,7 @@
     )
   )
 
+; TODO refactor
 ; typical m_value
 (define M_value
   (lambda (expression state)
@@ -87,6 +89,7 @@
       ((eq? '% (car expression)) (modulo (M_value(cadr expression) state) (M_value (caddr expression) state )))
       (else (M_boolean expression state))))) ; catches assignment with boolean cases
 
+; TODO refactor
 (define M_boolean
   (lambda (expression state)
     (cond
@@ -109,11 +112,12 @@
   (lambda (var state)
     (state-layer-declare var state)))
 
+; TODO refactor
 (define M_declare-assign
   (lambda (var expression state)
     (assign-var-state var (M_value expression (declare-var-state var state)) (declare-var-state var state))))
                       
-
+; TODO refactor
 (define M_return
   (lambda (expression state)
       (M_value expression state)))
@@ -123,25 +127,45 @@
   (lambda (expression state)
     (assign-var-state (cadr expression) (M_value (caddr expression) state) state)))
 
+; TODO refactor
 (define M_if
   (lambda (condition then state)
     (cond
       ((M_boolean condition state) (process-statement then state))
       (else state))))
 
+; TODO refactor
 (define M_if-else
   (lambda (condition then else state)
     (cond
       ((M_boolean condition state) (process-statement then state))
       (else (process-statement else state) ))))
 
-
+; TODO refactor
 (define M_while
   (lambda (condition body state)
     (cond
       ((M_boolean condition state) (M_while condition body (process-statement body state)))
       (else state))))
+; M_try
 
+; M_catch
+
+; M_try-finally
+
+; M_begin
+; returns the state after execution of the code block
+(define M_begin
+  (lambda (statements state return break continue throw)
+    (letrec ((loop (lambda (statements state)
+                     ;(display s)
+                     ;(display "\n")
+                     (cond
+                       ((null? statements) (state-layer-pop state))
+                       (else (loop (blocks statements) (process-statement (current-block statements) state return (lambda (v) (break (state-layer-pop v))) continue (lambda (v1 v2) (throw v1 (state-layer-pop v2))))))))))
+      (loop statements (state-layer-push (empty-state) state)))))
+
+; TODO refactor
 ; processes statements and changes the state accordingly
 (define process-statement
   (lambda (statement state)
@@ -211,7 +235,7 @@
 
 ; Returns true if given a try statement with a finally
 (define try-finally?
-  (lambda (stmt)
+  (lambda (statement)
     (cond
       ((and (eq? 'try (operator statement)) (eq? (length statement) 4)) #t)
       (else #f))))
@@ -221,7 +245,7 @@
 (define try?
   (lambda (statement)
     (cond
-      ((and (eq? 'try (operator stmt)) ((eq? (length (cadddr statement)) 0))) #t)
+      ((and (eq? 'try (operator statement)) ((eq? (length (cadddr statement)) 0))) #t)
         (else #f))))
 
 ; checks if we have a begin statement
@@ -312,7 +336,7 @@
                            (assign-var-state var val (later-state state)))))))
 
 ; removes a variable from the state
-define remove-var-state
+(define remove-var-state
   (lambda (var state)
     (cond
       ((null? (car state)) (error var "variable not declared"))
@@ -332,8 +356,13 @@ define remove-var-state
 (define been-assigned?
   (lambda (var state)
     (if (been-declared? var state)
-        (not (null? (get-var-state var state)))
+        (not (null? (retrieve-var-state var state)))
         (error var "variable not declared"))))
+
+; returns an empty state
+(define empty-state
+  (lambda ()
+    '(()())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Layer functions that allow the old state implementation to work
@@ -356,14 +385,14 @@ define remove-var-state
     (cond
       ((null? layer) (error var "variable not declared"))
       ((been-declared? var (state-layer-peek layer)) (state-layer-push  (remove-var-state var (state-layer-peek layer)) (state-layer-pop layer)))
-      (else (state-layer-push (state-layer-peek layer) (remove-var-state var (state-layer-pop stack)))))))
+      (else (state-layer-push (state-layer-peek layer) (remove-var-state var (state-layer-pop layer)))))))
 
 ; Returns the value of var in the state.
 (define state-layer-get
   (lambda (var layer)
     (cond
       ((null? layer) (error var "variable not declared"))
-      ((been-declared? var (state-layer-peek stack)) (get-var-state var (state-layer-peek stack)))
+      ((been-declared? var (state-layer-peek layer)) (retrieve-var-state var (state-layer-peek layer)))
       (else (state-layer-get var (state-layer-pop layer))))))
 
 ; Returns #t if var has a value assigned to it in the current state layer
@@ -375,7 +404,7 @@ define remove-var-state
       (else (state-layer-assigned? var (state-layer-pop layer))))))
 
 ; returns #t if var has been declared in the current state layer
-(define state-layer-delcared?
+(define state-layer-declared?
   (lambda (var layer)
     (cond
       ((null? layer) #f)
@@ -394,7 +423,7 @@ define remove-var-state
   (lambda (var val layer)
     (cond
       ((null? layer) (error var "variable not declared"))
-      ((been-declared? var (statae-layer-peek layer)) (statye-layer-push (assign-var-state var val (state-layer-peek layer)) (state-layer-pop layer)))
+      ((been-declared? var (state-layer-peek layer)) (state-layer-push (assign-var-state var val (state-layer-peek layer)) (state-layer-pop layer)))
       (else (state-layer-push (state-layer-peek layer) (state-layer-assign var val (state-layer-pop layer)))))))
 
 
