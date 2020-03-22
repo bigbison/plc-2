@@ -82,15 +82,15 @@
       ((null? expression) (error 'parser "parser should have caught this"))
       ((number? expression) expression)
       ((symbol? expression) (retrieve-var-state expression state))
-      ((eq? '+ (car expression)) (+ (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '* (car expression)) (* (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((and (eq?(length expression) 3)(eq? '- (car expression))) (- (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((and (eq?(length expression) 2)(eq? '- (car expression))) (- 0 (M_value (cadr expression) state throw)))
-      ((eq? '/ (car expression)) (quotient (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '% (car expression)) (modulo (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
+      ((eq? '+ (car expression)) (+ (M_value(cadr expression) state) (M_value (caddr expression) state )))
+      ((eq? '* (car expression)) (* (M_value(cadr expression) state) (M_value (caddr expression) state )))
+      ((and (eq?(length expression) 3)(eq? '- (car expression))) (- (M_value(cadr expression) state) (M_value (caddr expression) state )))
+      ((and (eq?(length expression) 2)(eq? '- (car expression))) (- 0 (M_value (cadr expression) state )))
+      ((eq? '/ (car expression)) (quotient (M_value(cadr expression) state) (M_value (caddr expression) state )))
+      ((eq? '% (car expression)) (modulo (M_value(cadr expression) state) (M_value (caddr expression) state )))
       (else (M_boolean expression state))))) ; catches assignment with boolean cases
 
-; Refactored? needs a review as well.
+; TODO refactor
 (define M_boolean
   (lambda (expression state throw)
     (cond
@@ -98,15 +98,15 @@
       ((eq? 'false expression) #f)
       ((null? expression) (error 'parser "invalid op"))
       ((symbol? expression) (retrieve-var-state expression state))
-      ((eq? '== (car expression)) (eq? (M_value (cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '!= (car expression)) (not (eq? (M_value (cadr expression) state throw) (M_value (caddr expression) state throw))))
-      ((eq? '< (car expression)) (< (M_value (cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '> (car expression)) (> (M_value (cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '<= (car expression)) (<= (M_value (cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '>= (car expression)) (>= (M_value (cadr expression) state throw) (M_value (caddr expression) state throw)))
-      ((eq? '&& (car expression)) (and (M_boolean (cadr expression) state throw) (M_boolean (caddr expression) state throw)))
-      ((eq? '|| (car expression)) (or (M_boolean (cadr expression) state throw) (M_boolean (caddr expression) state throw)))
-      ((eq? '! (car expression)) (not (M_boolean (cadr expression) state throw)))
+      ((eq? '== (car expression)) (eq? (M_value (cadr expression) state) (M_value (caddr expression) state)))
+      ((eq? '!= (car expression)) (not (eq? (M_value (cadr expression) state) (M_value (caddr expression) state))))
+      ((eq? '< (car expression)) (< (M_value (cadr expression) state) (M_value (caddr expression) state)))
+      ((eq? '> (car expression)) (> (M_value (cadr expression) state) (M_value (caddr expression) state)))
+      ((eq? '<= (car expression)) (<= (M_value (cadr expression) state) (M_value (caddr expression) state)))
+      ((eq? '>= (car expression)) (>= (M_value (cadr expression) state) (M_value (caddr expression) state)))
+      ((eq? '&& (car expression)) (and (M_boolean (cadr expression) state) (M_boolean (caddr expression) state)))
+      ((eq? '|| (car expression)) (or (M_boolean (cadr expression) state) (M_boolean (caddr expression) state)))
+      ((eq? '! (car expression)) (not (M_boolean (cadr expression) state)))
       )))
 
 (define M_declare
@@ -136,7 +136,7 @@
       ((M_boolean condition state) (process-statement then state))
       (else state))))
 
-
+; TODO refactor
 (define M_if-else
   (lambda (condition then else state return break continue throw)
     (cond
@@ -193,9 +193,9 @@
                        (else (loop (blocks statements) (process-statement (current-block statements) state return (lambda (v) (break (state-layer-pop v))) continue (lambda (v1 v2) (throw v1 (state-layer-pop v2))))))))))
       (loop statements (state-layer-push (empty-state) state)))))
 
-
+; TODO refactor
 ; processes statements and changes the state accordingly
-(define process-statement ;; should be finished, but may need some reviewing
+(define process-statement
   (lambda (statement state)
     (cond
       ((declare? statement) (M_declare (cadr statement) state)) ;; done
@@ -205,14 +205,12 @@
       ((while? statement) (M_while (cadr statement) (caddr statement) state return throw)) ;; done
       ((if-else? statement) (M_if-else (cadr statement) (caddr statement)
                                        (cadddr statement) state return break continue throw)) ;; done
-      ((if? statement) (M_if (cadr statement) (caddr statement) state return break continue throw)) ;; done
+      ((if? statement) (M_if (cadr statement) (caddr statement) state return brewk continue throw)) ;; done
       ((return? statement) (M_return (cadr statement) state return throw)) ;; done
       ((begin? statement) (M_begin(blocks statement) state return break continue throw));; done
       ((try? statement) (M_try (blocks statement) state return break continue throw));; done
-      ((try-finally? statement) (try-finally (blocks statement) state return break continue throw))
-      ((break? statement) (break state)) ;; done
-      ((continue? statement) (continue state)) ;;done
-      ((throw? statement) (throw (value (M_value (var statement) state throw)) state)) ;;done, questionably
+      ((try-finall? statement) (try-finally (blocks statement) state return break continue throw))
+      ((break? statement) (break state))
       (else (error statement "invalid statement"))
       )))
 ; checks if our statement is a return statement
