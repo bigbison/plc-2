@@ -88,7 +88,7 @@
       ((eq? expression #t) 'true)
       ((null? expression) (error 'parser "parser should have caught this"))
       ((number? expression) expression)
-      ((symbol? expression) (retrieve-var-state expression state))
+      ((symbol? expression) (state-layer-get expression state))
       ((eq? '+ (car expression)) (+ (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
       ((eq? '* (car expression)) (* (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
       ((and (eq?(length expression) 3)(eq? '- (car expression))) (- (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
@@ -123,7 +123,7 @@
 
 (define M_declare-assign
   (lambda (var expression state throw)
-    (state-layer-assign var ((M_value expression (state-layer-declare var state) throw))
+    (state-layer-assign var (M_value expression (state-layer-declare var state) throw)
                       (state-layer-declare var state))))
                       
 (define M_return
@@ -133,7 +133,7 @@
 ; This only works if the statement has already been declared
 (define M_assign
   (lambda (var expression state throw)
-    (state-layer-assign var (value (M_value expression state throw)) (state (M_value expression state throw)))))
+    (state-layer-assign var (M_value expression state throw) state)))
 
 
 (define M_if
@@ -207,7 +207,7 @@
       ((declare? statement) (M_declare (cadr statement) state)) ;; done
       ((declare-assignment? statement) (M_declare-assign (cadr statement) ;; done
                                        (caddr statement) state throw))
-      ((assignment? statement) (M_assign statement state throw)) ;; done
+      ((assignment? statement) (M_assign (cadr statement) (caddr statement) state throw)) ;; done
       ((while? statement) (M_while (cadr statement) (caddr statement) state return throw)) ;; done
       ((if-else? statement) (M_if-else (cadr statement) (caddr statement)
                                        (cadddr statement) state return break continue throw)) ;; done
@@ -343,16 +343,9 @@
 (define retrieve-var-state
   (lambda (var state)
     (cond
-      ((not (been-declared? var state)) (error var "variable used before declaration"))
-      ((null? state) null)
-      ((null? var) null)
-      ((and (eq? var (caar state)) (eq? (caadr state) 'undf))
-       (error var "variable not assigned")) ; throw error if not assigned
-      ((eq? var (caar state)) (caadr state))
-      ((and (eq? var (caar state)) (eq? (caar state) 'true)) #t)
-      ((and (eq? var (caar state)) (eq? (caar state) 'false)) #f)
-      (else (retrieve-var-state var (rebuild (cdr (car state)) (cdr (cadr state)))))
-      )))
+      ((null? (car state)) (error var "variable not declared"))
+      ((eq? (car (first-state state)) var) (cadr (first-state state)))
+      (else (retrieve-var-state var (later-state state))))))
 
 ; declares a varaible and adds it to the state list
 (define declare-var-state
@@ -361,19 +354,15 @@
       ((been-declared? var state) (error var "variable already declared"))
       ((null? var) null)
       ((null? state) null)
-      ((attatch-state (list var 'undf) state)))))
+      ((attatch-state (list var '()) state)))))
 
 ; assigns a value to a variable
 (define assign-var-state
   (lambda (var val state)
     (cond
-      ((not (been-declared? var state))(error var "variable used before declaration"))
-      ((null? val) null)
-      ((null? var) null)
-      ((eq? (car (var-list state)) var) (list (var-list state)
-                                              (cons val (cdr (val-list state)))))
-      (else (attatch-state (first-state state)
-                           (assign-var-state var val (later-state state)))))))
+      ((null? (car state)) (error var "variable not declared"))
+      ((eq? (car (first-state state)) var) (list (car state) (cons val (cdadr state))))
+      (else (attatch-state (first-state state) (assign-var-state var val (later-state state)))))))
 
 ; removes a variable from the state
 (define remove-var-state
@@ -466,7 +455,7 @@
       ((been-declared? var (state-layer-peek layer)) (state-layer-push (assign-var-state var val (state-layer-peek layer)) (state-layer-pop layer)))
       (else (state-layer-push (state-layer-peek layer) (state-layer-assign var val (state-layer-pop layer)))))))
 
-; 
+
 
 
 
