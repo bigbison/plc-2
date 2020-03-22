@@ -49,7 +49,7 @@
 ; TODO refactor
 (define main
   (lambda (file)
-    (run (parser file) '(()()) )
+    (run (parser file) '((()())))
     ))
 
 ; TODO refactor
@@ -62,11 +62,11 @@
            (run (cdr instructions)       ; PLEASE CHECK THE BOTTOM LINE HERE, lambda, value and initial-* stuff is suspect
                 (process-statement (car instructions) state (lambda (v) (return (value v))) initial-break initial-continue initial-throw)))))))
 
-(cond  ;This cond is also suspect as fuck, what is up with that
-      ((boolean? state) (truefalse state))
-      ((number? state) state)
-      ((null? instructions) (error 'parse "no valid results found"))
-      (else (run (cdr instructions) (process-statement (car instructions) state))))))
+;(cond  ;This cond is also suspect as fuck, what is up with that
+ ;     ((boolean? state) (truefalse state))
+    ;  ((number? state) state)
+    ;  ((null? instructions) (error 'parse "no valid results found"))
+    ;  (else (run (cdr instructions) (process-statement (car instructions) state))))))
 
 
 
@@ -82,7 +82,7 @@
 ; TODO refactor
 ; typical m_value
 (define M_value
-  (lambda (expression state)
+  (lambda (expression state throw)
     (cond
       ((eq? expression #f) 'false)
       ((eq? expression #t) 'true)
@@ -123,7 +123,7 @@
 
 (define M_declare-assign
   (lambda (var expression state throw)
-    (state-layer-assign var (value (M_value expression (state-layer-declare var state) throw))
+    (state-layer-assign var ((M_value expression (state-layer-declare var state) throw))
                       (state-layer-declare var state))))
                       
 (define M_return
@@ -215,10 +215,10 @@
       ((return? statement) (M_return (cadr statement) state return throw)) ;; done
       ((begin? statement) (M_begin(blocks statement) state return break continue throw));; done
       ((try? statement) (M_try (blocks statement) state return break continue throw));; done
-      ((try-finally? statement) (try-finally (blocks statement) state return break continue throw))
+      ((try-finally? statement) (M_try-finally (blocks statement) state return break continue throw))
       ((break? statement) (break state)) ;; done
       ((continue? statement) (continue state)) ;;done
-      ((throw? statement) (throw (value (M_value (var statement) state throw)) state)) ;;done, questionably
+      ((throw? statement) (throw (value (M_value (cadr statement) state throw)) state)) ;;done, questionably
       (else (error statement "invalid statement"))
       )))
 ; checks if our statement is a return statement
@@ -466,6 +466,7 @@
       ((been-declared? var (state-layer-peek layer)) (state-layer-push (assign-var-state var val (state-layer-peek layer)) (state-layer-pop layer)))
       (else (state-layer-push (state-layer-peek layer) (state-layer-assign var val (state-layer-pop layer)))))))
 
+; 
 
 
 
