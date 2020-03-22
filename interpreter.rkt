@@ -129,11 +129,10 @@
     (state-layer-assign var (value (M_value expression state throw)) (state (M_value expression state throw)))))
 
 
-; TODO refactor
 (define M_if
-  (lambda (condition then state)
+  (lambda (condition then state return break continue throw)
     (cond
-      ((M_boolean condition state) (process-statement then state))
+      ((M_boolean condition state throw) (process-statement then state return break continue throw))
       (else state))))
 
 
@@ -196,7 +195,7 @@
 
 ; processes statements and changes the state accordingly
 (define process-statement ;; should be finished, but may need some reviewing
-  (lambda (statement state)
+  (lambda (statement state return break continue throw)
     (cond
       ((declare? statement) (M_declare (cadr statement) state)) ;; done
       ((declare-assignment? statement) (M_declare-assign (cadr statement) ;; done
