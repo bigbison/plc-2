@@ -198,17 +198,21 @@
 (define process-statement
   (lambda (statement state)
     (cond
-      ((declare? statement) (M_declare (cadr statement) state))
-      ((declare-assignment? statement) (M_declare-assign (cadr statement)
-                                       (caddr statement) state))
-      ((assignment? statement) (M_assign statement state)) 
-      ((while? statement) (M_while (cadr statement) (caddr statement) state))
+      ((declare? statement) (M_declare (cadr statement) state)) ;; done
+      ((declare-assignment? statement) (M_declare-assign (cadr statement) ;; done
+                                       (caddr statement) state throw))
+      ((assignment? statement) (M_assign statement state throw)) ;; done
+      ((while? statement) (M_while (cadr statement) (caddr statement) state return throw)) ;; done
       ((if-else? statement) (M_if-else (cadr statement) (caddr statement)
-                                       (cadddr statement) state))
-      ((if? statement) (M_if (cadr statement) (caddr statement) state))
-      ((return? statement) (M_return (cadr statement) state))
-      (else (error statement "invalid statement")))))
-
+                                       (cadddr statement) state return break continue throw)) ;; done
+      ((if? statement) (M_if (cadr statement) (caddr statement) state return brewk continue throw)) ;; done
+      ((return? statement) (M_return (cadr statement) state return throw)) ;; done
+      ((begin? statement) (M_begin(blocks statement) state return break continue throw));; done
+      ((try? statement) (M_try (blocks statement) state return break continue throw));; done
+      ((try-finall? statement) (try-finally (blocks statement) state return break continue throw))
+      ((break? statement) (break state))
+      (else (error statement "invalid statement"))
+      )))
 ; checks if our statement is a return statement
 (define return?
   (lambda (stmt)
