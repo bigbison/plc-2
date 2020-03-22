@@ -55,7 +55,14 @@
 ; TODO refactor
 (define run
   (lambda (instructions state)
-    (cond
+    (call/cc
+     (lambda (return)
+       (if (null? instructions)
+           (error "no return statement")
+           (run (cdr instructions)       ; PLEASE CHECK THE BOTTOM LINE HERE, lambda, value and initial-* stuff is suspect
+                (process-statement (car instructions) state (lambda (v) (return (value v))) initial-break initial-continue initial-throw)))))))
+
+(cond  ;This cond is also suspect as fuck, what is up with that
       ((boolean? state) (truefalse state))
       ((number? state) state)
       ((null? instructions) (error 'parse "no valid results found"))
