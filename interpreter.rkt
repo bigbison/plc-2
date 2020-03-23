@@ -18,7 +18,6 @@
 (define val caddr)
 (define value car)
 (define state cadr)
-(define function-body cadr)
 ; list of blocks after a begin or try
 (define blocks cdr)
 ; Current (first) code block in blocks
@@ -43,31 +42,22 @@
 (define initial-break (lambda (v) (error "break not in a loop")))
 (define initial-throw (lambda (v1 v2) (error "throw not inside try")))
 (define initial-continue (lambda (v) (error "continue not in a loop")))
-(define initial-return (lambda (v) (error "return outside of function")))
 
 ; input file name to interpret file
-; TODO refactor
+
 (define main
   (lambda (file)
     (run (parser file) '((()())))
     ))
 
-; TODO refactor
 (define run
   (lambda (instructions state)
     (call/cc
      (lambda (return)
        (if (null? instructions)
            (error "no return statement")
-           (run (cdr instructions)       ; PLEASE CHECK THE BOTTOM LINE HERE, lambda, value and initial-* stuff is suspect
-                (process-statement (car instructions) state (lambda (v) (return (value v))) initial-break initial-continue initial-throw)))))))
-
-;(cond  ;This cond is also suspect as fuck, what is up with that
- ;     ((boolean? state) (truefalse state))
-    ;  ((number? state) state)
-    ;  ((null? instructions) (error 'parse "no valid results found"))
-    ;  (else (run (cdr instructions) (process-statement (car instructions) state))))))
-
+           (run (cdr instructions)  
+                (process-statement (car instructions) state (lambda (v) (return (car v))) initial-break initial-continue initial-throw)))))))
 
 
 (define truefalse
@@ -79,7 +69,6 @@
     )
   )
 
-; TODO refactor
 ; typical m_value
 (define M_value
   (lambda (expression state throw)
@@ -95,9 +84,9 @@
       ((and (eq?(length expression) 2)(eq? '- (car expression))) (- 0 (M_value (cadr expression) state throw)))
       ((eq? '/ (car expression)) (quotient (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
       ((eq? '% (car expression)) (modulo (M_value(cadr expression) state throw) (M_value (caddr expression) state throw)))
-      (else (M_boolean expression state))))) ; catches assignment with boolean cases
+      (else (M_boolean expression state)))))
 
-; Refactored? needs a review as well.
+
 (define M_boolean
   (lambda (expression state throw)
     (cond
@@ -125,12 +114,13 @@
   (lambda (var expression state throw)
     (state-layer-assign var (M_value expression (state-layer-declare var state) throw)
                       (state-layer-declare var state))))
-                      
+
+
 (define M_return
   (lambda (expression state return throw)
-      (M_value expression state throw)))
+        (return (M_value expression state throw)))) ; <--- this doesn't work but we can't figure out why
 
-; This only works if the statement has already been declared
+
 (define M_assign
   (lambda (var expression state throw)
     (state-layer-assign var (M_value expression state throw) state)))
@@ -201,24 +191,24 @@
 
 
 ; processes statements and changes the state accordingly
-(define process-statement ;; should be finished, but may need some reviewing
+(define process-statement
   (lambda (statement state return break continue throw)
     (cond
-      ((declare? statement) (M_declare (cadr statement) state)) ;; done
-      ((declare-assignment? statement) (M_declare-assign (cadr statement) ;; done
+      ((declare? statement) (M_declare (cadr statement) state))
+      ((declare-assignment? statement) (M_declare-assign (cadr statement)
                                        (caddr statement) state throw))
-      ((assignment? statement) (M_assign (cadr statement) (caddr statement) state throw)) ;; done
-      ((while? statement) (M_while (cadr statement) (caddr statement) state return throw)) ;; done
+      ((assignment? statement) (M_assign (cadr statement) (caddr statement) state throw))
+      ((while? statement) (M_while (cadr statement) (caddr statement) state return throw))
       ((if-else? statement) (M_if-else (cadr statement) (caddr statement)
-                                       (cadddr statement) state return break continue throw)) ;; done
-      ((if? statement) (M_if (cadr statement) (caddr statement) state return break continue throw)) ;; done
-      ((return? statement) (M_return (cadr statement) state return throw)) ;; done
-      ((begin? statement) (M_begin(blocks statement) state return break continue throw));; done
-      ((try? statement) (M_try (blocks statement) state return break continue throw));; done
+                                       (cadddr statement) state return break continue throw))
+      ((if? statement) (M_if (cadr statement) (caddr statement) state return break continue throw))
+      ((return? statement) (M_return (cadr statement) state return throw))
+      ((begin? statement) (M_begin(blocks statement) state return break continue throw))
+      ((try? statement) (M_try (blocks statement) state return break continue throw))
       ((try-finally? statement) (M_try-finally (blocks statement) state return break continue throw))
-      ((break? statement) (break state)) ;; done
-      ((continue? statement) (continue state)) ;;done
-      ((throw? statement) (throw (value (M_value (cadr statement) state throw)) state)) ;;done, questionably
+      ((break? statement) (break state))
+      ((continue? statement) (continue state))
+      ((throw? statement) (throw (value (M_value (cadr statement) state throw)) state))
       (else (error statement "invalid statement"))
       )))
 ; checks if our statement is a return statement
@@ -266,7 +256,6 @@
       (else #f))))
 
 ; checks if we have a declaration and assignment in the same statement
-; TODO check if this handles this statement correctly
 (define declare-assignment?
   (lambda (statement)
     (cond
